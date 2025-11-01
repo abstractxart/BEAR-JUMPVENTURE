@@ -1,0 +1,178 @@
+{
+  "screenSize": {
+    "width": {
+      "value": 432,
+      "type": "number",
+      "description": "Screen width for 9:16 vertical aspect ratio"
+    },
+    "height": {
+      "value": 768,
+      "type": "number",
+      "description": "Screen height for 9:16 vertical aspect ratio"
+    }
+  },
+  "debugConfig": {
+    "debug": {
+      "value": false,
+      "type": "boolean",
+      "description": "Enable debug mode"
+    },
+    "debugShowBody": {
+      "value": false,
+      "type": "boolean",
+      "description": "Show collision bodies"
+    }
+  },
+  "renderConfig": {
+    "pixelArt": {
+      "value": true,
+      "type": "boolean",
+      "description": "Enable pixel art rendering for retro SNES-era style"
+    }
+  },
+  "playerConfig": {
+    "jumpPower": {
+      "value": 450,
+      "type": "number",
+      "description": "Jump power"
+    },
+    "moveSpeed": {
+      "value": 200,
+      "type": "number",
+      "description": "Movement speed"
+    },
+    "springBounceMultiplier": {
+      "value": 1.8,
+      "type": "number",
+      "description": "Spring jump multiplier for golden spring platforms"
+    },
+    "honeyJetBoostPower": {
+      "value": 1.0,
+      "type": "number",
+      "description": "Boost multiplier from collecting Bear coin (1.0 = no boost)"
+    },
+    "rocketBoostPower": {
+      "value": 500,
+      "type": "number",
+      "description": "Rocket booster jump power"
+    }
+  },
+  "platformConfig": {
+    "normalPlatformChance": {
+      "value": 60,
+      "type": "number",
+      "description": "Normal platform spawn probability (%)"
+    },
+    "breakingPlatformChance": {
+      "value": 20,
+      "type": "number",
+      "description": "Disappearing platform spawn probability (%)"
+    },
+    "movingPlatformChance": {
+      "value": 15,
+      "type": "number",
+      "description": "Moving platform spawn probability (%)"
+    },
+    "springPlatformChance": {
+      "value": 5,
+      "type": "number",
+      "description": "Spring platform spawn probability (%)"
+    },
+    "platformSpacing": {
+      "value": 70,
+      "type": "number",
+      "description": "Vertical distance between platforms"
+    },
+    "movingPlatformSpeed": {
+      "value": 80,
+      "type": "number",
+      "description": "Moving platform speed"
+    }
+  },
+  "enemyConfig": {
+    "spawnChance": {
+      "value": 8,
+      "type": "number",
+      "description": "Enemy spawn probability (%)"
+    },
+    "pepeSpeed": {
+      "value": 60,
+      "type": "number",
+      "description": "Pepe flying speed"
+    },
+    "dogeSpeed": {
+      "value": 50,
+      "type": "number",
+      "description": "Doge walking speed on platforms"
+    },
+    "pepeVerticalSpeed": {
+      "value": 30,
+      "type": "number",
+      "description": "Pepe vertical floating speed"
+    }
+  },
+  "coinConfig": {
+    "xrpCoinChance": {
+      "value": 15,
+      "type": "number",
+      "description": "XRP coin spawn probability (%)"
+    },
+    "bearCoinChance": {
+      "value": 3,
+      "type": "number",
+      "description": "Golden Bear coin spawn probability (%)"
+    },
+    "xrpCoinValue": {
+      "value": 250,
+      "type": "number",
+      "description": "Points for collecting XRP coin"
+    },
+    "bearCoinValue": {
+      "value": 500,
+      "type": "number",
+      "description": "Points for collecting Bear coin"
+    },
+    "bearCoinBoostDuration": {
+      "value": 0,
+      "type": "number",
+      "description": "Honey Jet boost duration from Bear coin (milliseconds)"
+    },
+    "rocketBoosterChance": {
+      "value": 2,
+      "type": "number",
+      "description": "Jetpack spawn probability (%) - rare powerup"
+    }
+  },
+  "gameConfig": {
+    "gravity": {
+      "value": 700,
+      "type": "number",
+      "description": "Gravity strength"
+    },
+    "scoreMultiplier": {
+      "value": 10,
+      "type": "number",
+      "description": "Score multiplier"
+    },
+    "jetpackCoinBoost": {
+      "value": 200,
+      "type": "number",
+      "description": "Extra upward velocity when collecting coins during jetpack"
+    },
+    "jesterHatDuration": {
+      "value": 7500,
+      "type": "number",
+      "description": "Jester hat powerup duration in milliseconds (7.5 seconds)"
+    },
+    "jesterHatJumpMultiplier": {
+      "value": 2.0,
+      "type": "number",
+      "description": "Jump power multiplier when jester hat is active"
+    },
+    "jesterHatSpawnChance": {
+      "value": 1,
+      "type": "number",
+      "description": "Jester hat spawn probability (%)"
+    }
+  }
+}
