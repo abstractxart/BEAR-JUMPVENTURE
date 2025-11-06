@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { screenSize } from '../gameConfig.json'
+import { BEARParkAPI } from '../BEARParkAPI'
 
 export class GameOverScene extends Phaser.Scene {
   constructor() {
@@ -57,6 +58,17 @@ export class GameOverScene extends Phaser.Scene {
         strokeThickness: 4,
         align: 'center'
       }).setOrigin(0.5, 0.5).setScrollFactor(0).setDepth(1001)
+
+      // Submit score to BEAR Park central leaderboard
+      BEARParkAPI.submitScore(gameScene.score, {
+        max_height: gameScene.highestY
+      }).then(result => {
+        if (result.success && result.is_high_score) {
+          console.log('🎉 New BEAR Park high score!');
+        }
+      }).catch(error => {
+        console.error('Error submitting to BEAR Park:', error);
+      });
     }
 
     // Create restart text
