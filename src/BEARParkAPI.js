@@ -79,14 +79,13 @@ export class BEARParkAPI {
     try {
       console.log(`📤 Submitting score to BEAR Park: ${score}`);
 
-      const response = await fetch(`${BEAR_API_URL}/leaderboard`, {
+      const response = await fetch(`${BEAR_API_URL}/leaderboard/${GAME_ID}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           wallet_address: walletAddress,
-          game_id: GAME_ID,
           score: score,
           metadata: {
             ...metadata,
