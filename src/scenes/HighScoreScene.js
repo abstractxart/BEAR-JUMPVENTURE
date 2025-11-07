@@ -17,6 +17,9 @@ export class HighScoreScene extends Phaser.Scene {
   }
 
   async create() {
+    // Reset submission flag for new game
+    this.nameSubmitted = false
+
     const screenWidth = screenSize.width.value
     const screenHeight = screenSize.height.value
 
@@ -530,8 +533,15 @@ export class HighScoreScene extends Phaser.Scene {
 
       if (result.success && result.is_high_score) {
         console.log('🎉 New BEAR Park high score!')
+        // Show success message
+        this.showSuccessMessage('🎉 NEW HIGH SCORE! Score saved to BEAR Park!')
       } else if (result.success) {
         console.log('✅ Score submitted successfully')
+        // Show success message
+        this.showSuccessMessage('✅ Score submitted to BEAR Park!')
+      } else if (result.error) {
+        console.error('❌ Error from API:', result.error)
+        this.showSuccessMessage(`⚠️ Error: ${result.message || result.error}`)
       }
 
       // Reload leaderboard from central API to show updated rankings
@@ -560,6 +570,53 @@ export class HighScoreScene extends Phaser.Scene {
     if (nameContainer) {
       nameContainer.style.display = 'none'
     }
+  }
+
+  showSuccessMessage(message) {
+    // Create a toast notification
+    const toast = document.createElement('div')
+    toast.textContent = message
+    toast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #07ae08 0%, #05860 6 100%);
+      color: #fff;
+      padding: 16px 24px;
+      border-radius: 12px;
+      font-family: 'Luckiest Guy', cursive;
+      font-size: 18px;
+      z-index: 10000000;
+      box-shadow: 0 4px 16px rgba(7, 174, 8, 0.5);
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      text-shadow: 2px 2px 0px #000;
+      animation: slideDown 0.3s ease-out;
+    `
+
+    // Add animation
+    const style = document.createElement('style')
+    style.textContent = `
+      @keyframes slideDown {
+        from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+      }
+    `
+    document.head.appendChild(style)
+    document.body.appendChild(toast)
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+      toast.style.animation = 'slideDown 0.3s ease-out reverse'
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast)
+        }
+        if (style.parentNode) {
+          style.parentNode.removeChild(style)
+        }
+      }, 300)
+    }, 3000)
   }
 
   restartGame() {
