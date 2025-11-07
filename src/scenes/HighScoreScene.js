@@ -1,9 +1,12 @@
 import Phaser from 'phaser'
 import { screenSize } from '../gameConfig.json'
+import { BEARParkAPI } from '../BEARParkAPI'
 
 export class HighScoreScene extends Phaser.Scene {
   constructor() {
     super({ key: 'HighScoreScene' })
+    this.leaderboard = []
+    this.nameSubmitted = false
   }
 
   init(data) {
@@ -13,7 +16,7 @@ export class HighScoreScene extends Phaser.Scene {
     this.viewOnly = data.viewOnly || false // When viewing from title screen
   }
 
-  create() {
+  async create() {
     const screenWidth = screenSize.width.value
     const screenHeight = screenSize.height.value
 
@@ -22,13 +25,13 @@ export class HighScoreScene extends Phaser.Scene {
     this.sound.mute = audioMuted
 
     // Dim overlay
-    this.add.rectangle(0, 0, screenWidth, screenHeight, 0x000000, 0.85)
+    this.add.rectangle(0, 0, screenWidth, screenHeight, 0x000000, 0.7)
       .setOrigin(0, 0)
       .setScrollFactor(0)
       .setDepth(1000)
 
-    // Load leaderboard
-    this.leaderboard = this.loadLeaderboard()
+    // Load leaderboard from BEAR Park API
+    await this.loadLeaderboard()
 
     // If viewing from title, just show leaderboard
     if (this.viewOnly) {
@@ -36,301 +39,572 @@ export class HighScoreScene extends Phaser.Scene {
       return
     }
 
-    // Always show leaderboard immediately after game over
-    // Display player's recent run at the top, then leaderboard
-    this.showLeaderboardWithPlayerScore()
+    // Create game over UI
+    this.createUI()
+    this.setupInputs()
+
+    // Auto-submit score if user is authenticated
+    if (BEARParkAPI.isAuthenticated()) {
+      const displayName = BEARParkAPI.getCurrentUserDisplayName()
+      console.log(`🔐 User authenticated as: ${displayName} - auto-submitting score`)
+      this.submitScore(displayName)
+    }
   }
 
-  // Data & Persistence
-  loadLeaderboard() {
+  async loadLeaderboard() {
+    // Fetch leaderboard from BEAR Park central API
+    console.log('🔍 Loading leaderboard from BEAR Park API...')
     try {
-      const data = localStorage.getItem('leaderboard_v1')
-      return data ? JSON.parse(data) : []
-    } catch (e) {
-      console.error('Failed to load leaderboard:', e)
-      return []
-    }
-  }
+      const centralLeaderboard = await BEARParkAPI.getLeaderboard(10)
+      console.log('✅ Central leaderboard response:', centralLeaderboard)
 
-  saveLeaderboard(leaderboard) {
-    try {
-      localStorage.setItem('leaderboard_v1', JSON.stringify(leaderboard))
-      return true
-    } catch (e) {
-      console.error('Failed to save leaderboard:', e)
-      this.showToast('Saved locally for this session')
-      return false
-    }
-  }
+      if (centralLeaderboard && centralLeaderboard.length > 0) {
+        // Transform central leaderboard entries to match local format
+        this.leaderboard = centralLeaderboard.map(entry => {
+          const displayName = BEARParkAPI.formatDisplayName(entry)
 
-  checkIfHighScore(score, height) {
-    if (this.leaderboard.length < 10) return true
-    const lastEntry = this.leaderboard[this.leaderboard.length - 1]
-    return score > lastEntry.score || (score === lastEntry.score && height > lastEntry.height)
-  }
-
-  // Show leaderboard with player score (after game over)
-  showLeaderboardWithPlayerScore() {
-    const screenWidth = screenSize.width.value
-    const screenHeight = screenSize.height.value
-
-    // Title with gentle fade-in
-    const title = this.add.text(screenWidth / 2, screenHeight * 0.06, 'HIGH SCORES', {
-      fontFamily: 'SupercellMagic',
-      fontSize: Math.min(screenWidth / 10, 38) + 'px',
-      fill: '#FFD700',
-      stroke: '#8B4513',
-      strokeThickness: 5,
-      align: 'center'
-    }).setOrigin(0.5).setDepth(1001).setAlpha(0)
-
-    // Fade in title
-    this.tweens.add({
-      targets: title,
-      alpha: 1,
-      duration: 500,
-      ease: 'Power2'
-    })
-
-    // Display player's recent run at the top
-    this.add.text(screenWidth / 2, screenHeight * 0.14, 'YOUR SCORE:', {
-      fontFamily: 'SupercellMagic',
-      fontSize: '18px',
-      fill: '#AAAAAA',
-      stroke: '#000000',
-      strokeThickness: 3,
-      align: 'center'
-    }).setOrigin(0.5).setDepth(1001)
-
-    this.add.text(screenWidth / 2, screenHeight * 0.19, `${this.totalScore}`, {
-      fontFamily: 'SupercellMagic',
-      fontSize: '28px',
-      fill: '#FFFFFF',
-      stroke: '#000000',
-      strokeThickness: 4,
-      align: 'center'
-    }).setOrigin(0.5).setDepth(1001)
-
-    this.add.text(screenWidth / 2, screenHeight * 0.24, `HEIGHT: ${this.maxHeight}m`, {
-      fontFamily: 'SupercellMagic',
-      fontSize: '16px',
-      fill: '#00FF88',
-      stroke: '#000000',
-      strokeThickness: 3,
-      align: 'center'
-    }).setOrigin(0.5).setDepth(1001)
-
-    // Divider line
-    this.add.rectangle(screenWidth / 2, screenHeight * 0.30, screenWidth * 0.85, 2, 0xFFD700)
-      .setDepth(1001)
-
-    // Display Top 10 Leaderboard
-    this.displayLeaderboardTable(screenHeight * 0.35)
-
-    // Check if player qualifies for Top 10
-    const qualifiesForTop10 = this.checkIfHighScore(this.totalScore, this.maxHeight)
-
-    if (qualifiesForTop10) {
-      // Show name entry
-      this.createNameEntryUI()
-    } else {
-      // Show skip/continue button
-      this.createSkipButton()
-    }
-  }
-
-  // Name entry UI (only shown if player qualifies for Top 10)
-  createNameEntryUI() {
-    const screenWidth = screenSize.width.value
-    const screenHeight = screenSize.height.value
-
-    // Input box
-    this.add.rectangle(screenWidth / 2, screenHeight * 0.78, 280, 48, 0x333333)
-      .setStrokeStyle(3, 0xFFD700)
-      .setDepth(1001)
-
-    this.playerName = ''
-    this.nameText = this.add.text(screenWidth / 2, screenHeight * 0.78, '_', {
-      fontFamily: 'SupercellMagic',
-      fontSize: '24px',
-      fill: '#FFD700',
-      align: 'center'
-    }).setOrigin(0.5).setDepth(1002)
-
-    // Instructions
-    this.add.text(screenWidth / 2, screenHeight * 0.72, 'Enter Your Name (Top 10!)', {
-      fontFamily: 'SupercellMagic',
-      fontSize: '16px',
-      fill: '#FFD700',
-      stroke: '#000000',
-      strokeThickness: 3,
-      align: 'center'
-    }).setOrigin(0.5).setDepth(1001)
-
-    // Large OK button at bottom center (mobile friendly)
-    const okBtn = this.add.text(screenWidth / 2, screenHeight * 0.90, 'OK', {
-      fontFamily: 'SupercellMagic',
-      fontSize: '32px',
-      fill: '#00FF00',
-      stroke: '#000000',
-      strokeThickness: 5,
-      padding: { x: 40, y: 15 }
-    }).setOrigin(0.5).setDepth(1001)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerdown', () => this.submitName())
-
-    // Setup keyboard input
-    this.setupNameInput()
-  }
-
-  // Skip/Continue button (shown if score doesn't qualify for Top 10)
-  createSkipButton() {
-    const screenWidth = screenSize.width.value
-    const screenHeight = screenSize.height.value
-
-    // Large Skip/Continue button at bottom center (mobile friendly)
-    const skipBtn = this.add.text(screenWidth / 2, screenHeight * 0.88, 'CONTINUE', {
-      fontFamily: 'SupercellMagic',
-      fontSize: '32px',
-      fill: '#FFFFFF',
-      stroke: '#000000',
-      strokeThickness: 5,
-      padding: { x: 40, y: 15 }
-    }).setOrigin(0.5).setDepth(1001)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerdown', () => this.returnToTitle())
-
-    // Allow Enter key to continue
-    this.input.keyboard.on('keydown-ENTER', () => this.returnToTitle())
-    this.input.keyboard.on('keydown-SPACE', () => this.returnToTitle())
-  }
-
-  setupNameInput() {
-    this.nameInputHandler = (event) => {
-      if (event.key === 'Enter') {
-        this.submitName()
-      } else if (event.key === 'Backspace') {
-        this.playerName = this.playerName.slice(0, -1)
-        this.updateNameDisplay()
-      } else if (event.key.length === 1 && this.playerName.length < 10) {
-        if (/^[a-zA-Z0-9 ]$/.test(event.key)) {
-          this.playerName += event.key
-          this.updateNameDisplay()
-        }
-      }
-    }
-    this.input.keyboard.on('keydown', this.nameInputHandler)
-  }
-
-  updateNameDisplay() {
-    this.nameText.setText(this.playerName || '_')
-  }
-
-  submitName() {
-    // Clean up input listener
-    if (this.nameInputHandler) {
-      this.input.keyboard.off('keydown', this.nameInputHandler)
-    }
-    
-    let finalName = this.playerName.trim()
-    
-    // Default fallback name if empty
-    if (!finalName) {
-      finalName = this.generateFallbackName()
-    }
-    
-    this.saveScore(finalName)
-  }
-
-  generateFallbackName() {
-    const randomNum = Math.floor(1000 + Math.random() * 9000)
-    return `Player${randomNum}`
-  }
-
-  saveScore(name) {
-    // Create new entry
-    const newEntry = {
-      name: name,
-      score: this.totalScore,
-      height: this.maxHeight,
-      date: new Date().toISOString()
-    }
-
-    // Add to leaderboard
-    this.leaderboard.push(newEntry)
-    
-    // Sort: Primary by score desc, Secondary by height desc
-    this.leaderboard.sort((a, b) => {
-      if (b.score !== a.score) {
-        return b.score - a.score
-      }
-      return b.height - a.height
-    })
-    
-    // Keep top 10 only
-    this.leaderboard = this.leaderboard.slice(0, 10)
-    
-    // Save
-    this.saveLeaderboard(this.leaderboard)
-    
-    // Play sound
-    this.sound.add('ui_click', { volume: 0.3 }).play()
-    
-    // Show confirmation and return to title
-    this.showConfirmationAndReturn()
-  }
-
-  showConfirmationAndReturn() {
-    const screenWidth = screenSize.width.value
-    const screenHeight = screenSize.height.value
-
-    // Show quick confirmation text
-    const confirmation = this.add.text(screenWidth / 2, screenHeight / 2, 'SAVED!', {
-      fontFamily: 'SupercellMagic',
-      fontSize: '48px',
-      fill: '#00FF00',
-      stroke: '#000000',
-      strokeThickness: 6,
-      align: 'center'
-    }).setOrigin(0.5).setDepth(2000).setAlpha(0)
-
-    // Fade in confirmation
-    this.tweens.add({
-      targets: confirmation,
-      alpha: 1,
-      duration: 300,
-      ease: 'Power2',
-      onComplete: () => {
-        // Wait a moment then fade out and return to title
-        this.time.delayedCall(800, () => {
-          this.tweens.add({
-            targets: confirmation,
-            alpha: 0,
-            duration: 400,
-            ease: 'Power2',
-            onComplete: () => {
-              this.returnToTitle()
+          // Parse avatar_nft JSON to get imageUrl
+          let avatarUrl = 'https://files.catbox.moe/25ekkd.png' // Default BEAR logo
+          if (entry.avatar_nft) {
+            try {
+              const avatarData = typeof entry.avatar_nft === 'string' ? JSON.parse(entry.avatar_nft) : entry.avatar_nft
+              if (avatarData.imageUrl) {
+                avatarUrl = avatarData.imageUrl
+              }
+            } catch (e) {
+              console.warn('Failed to parse avatar_nft for', displayName, e)
             }
-          })
+          }
+
+          return {
+            name: displayName,
+            score: entry.score,
+            height: entry.metadata?.max_height || 0,
+            date: entry.created_at || new Date().toISOString(),
+            avatar: avatarUrl
+          }
         })
+        console.log('✅ Loaded BEAR Park central leaderboard:', this.leaderboard)
+      } else {
+        this.leaderboard = []
+        console.log('⚠️ Central leaderboard is empty')
       }
+    } catch (error) {
+      console.error('❌ Error loading central leaderboard:', error)
+      this.leaderboard = []
+    }
+  }
+
+  createUI() {
+    // BEAR Park Theme Colors
+    const colors = {
+      gold: '#edb723',
+      purple: '#680cd9',
+      yellow: '#feb501',
+      green: '#07ae08',
+      charcoal: '#141619',
+      ink: '#0b0d0e'
+    }
+
+    // Generate leaderboard HTML with avatars (top 5 only)
+    const leaderboardHTML = this.leaderboard.slice(0, 5).map((entry, index) => {
+      const medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : ''))
+      const borderColor = index === 0 ? '#FFD700' : (index === 1 ? '#C0C0C0' : (index === 2 ? '#CD7F32' : colors.gold))
+      const borderWidth = index === 0 ? '4px' : (index === 1 ? '3px' : (index === 2 ? '3px' : '2px'))
+      const bgGradient = index === 0
+        ? 'linear-gradient(135deg, rgba(237, 183, 35, 0.3) 0%, rgba(255, 215, 0, 0.2) 100%)'
+        : (index === 1
+          ? 'linear-gradient(135deg, rgba(192, 192, 192, 0.2) 0%, rgba(169, 169, 169, 0.15) 100%)'
+          : (index === 2
+            ? 'linear-gradient(135deg, rgba(205, 127, 50, 0.2) 0%, rgba(184, 115, 51, 0.15) 100%)'
+            : 'linear-gradient(135deg, rgba(104, 12, 217, 0.15) 0%, rgba(7, 174, 8, 0.15) 100%)'))
+
+      // Avatar URL with fallback
+      const avatarUrl = entry.avatar || 'https://files.catbox.moe/25ekkd.png'
+      const displayName = entry.name || 'Anonymous'
+
+      return `
+        <div style="
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 8px 10px;
+          margin-bottom: 6px;
+          border-radius: 8px;
+          background: ${bgGradient};
+          border-left: ${borderWidth} solid ${borderColor};
+          transition: all 0.2s ease;
+          font-family: 'Luckiest Guy', cursive;
+        " onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='translateX(0)'">
+          <div style="font-size: 18px; color: ${colors.gold}; text-shadow: 1px 1px 0px #000; min-width: 36px;">
+            ${medal || `#${index + 1}`}
+          </div>
+          <img src="${avatarUrl}" alt="${displayName}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid ${colors.gold}; margin: 0 8px;" onerror="this.src='https://files.catbox.moe/25ekkd.png'">
+          <div style="font-size: 16px; color: #fff; text-shadow: 1px 1px 0px #000; flex: 1; margin: 0 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            ${displayName}
+          </div>
+          <div style="font-size: 18px; color: ${colors.yellow}; text-shadow: 1px 1px 0px #000;">
+            ${entry.score.toLocaleString()}
+          </div>
+        </div>
+      `
+    }).join('') || '<div style="color: #fff; font-size: 14px; text-align: center;">No scores yet!</div>'
+
+    // Create DOM UI overlay
+    const uiHTML = `
+      <div id="game-over-container" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(180deg, ${colors.charcoal} 0%, ${colors.ink} 100%);
+        z-index: 999999;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Luckiest Guy', cursive;
+        pointer-events: auto;
+        touch-action: auto;
+      ">
+        <div style="
+          max-width: 600px;
+          width: 100%;
+          padding: 16px;
+          padding-bottom: calc(16px + env(safe-area-inset-bottom));
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          max-height: 100vh;
+          overflow-y: auto;
+        ">
+
+          <!-- Game Over Title -->
+          <div style="
+            font-size: 40px;
+            text-align: center;
+            color: #ff3333;
+            text-shadow: 3px 3px 0px #000000;
+            animation: gameOverPulse 1s ease-in-out infinite alternate;
+            font-family: 'Luckiest Guy', cursive;
+            line-height: 1;
+          ">GAME OVER</div>
+
+          <!-- Score Card with Tri-Color Border -->
+          <div style="
+            position: relative;
+            background: radial-gradient(500px 200px at 50% -20%, rgba(118,174,255,.12), transparent 60%), ${colors.ink};
+            border-radius: 16px;
+            padding: 16px;
+            isolation: isolate;
+          ">
+            <!-- Tri-color border -->
+            <div style="
+              content: '';
+              position: absolute;
+              inset: 0;
+              border-radius: 16px;
+              padding: 3px;
+              background: linear-gradient(135deg, ${colors.purple} 0%, ${colors.purple} 33.33%, ${colors.yellow} 33.33%, ${colors.yellow} 66.66%, ${colors.green} 66.66%, ${colors.green} 100%);
+              -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+              -webkit-mask-composite: xor;
+              mask-composite: exclude;
+              pointer-events: none;
+              z-index: 0;
+              opacity: 1;
+            "></div>
+
+            <div style="position: relative; z-index: 1;">
+              <div style="font-size: 16px; color: ${colors.gold}; text-shadow: 1px 1px 0px rgba(0,0,0,0.5); margin-bottom: 4px; text-transform: uppercase; text-align: center;">
+                YOUR SCORE
+              </div>
+              <div style="font-size: 36px; color: #fff; text-shadow: 2px 2px 0px rgba(0,0,0,0.5); text-align: center; line-height: 1;">
+                ${this.totalScore.toLocaleString()}
+              </div>
+              <div style="font-size: 14px; color: #fff; text-align: center; margin-top: 4px;">Max Height: ${this.maxHeight}m</div>
+            </div>
+          </div>
+
+          <!-- Name Entry Form (only shown if NOT authenticated) -->
+          ${BEARParkAPI.isAuthenticated() ? '' : `
+          <div id="name-entry-container" style="
+            background: linear-gradient(180deg, rgba(237,183,35,0.12) 0%, #1a1d22 100%);
+            border-radius: 12px;
+            padding: 12px;
+            border-bottom: 3px solid;
+            border-image: linear-gradient(to right, ${colors.purple} 0%, ${colors.purple} 33.33%, ${colors.yellow} 33.33%, ${colors.yellow} 66.66%, ${colors.green} 66.66%, ${colors.green} 100%) 1;
+          ">
+            <div style="
+              font-size: 14px;
+              color: ${colors.gold};
+              text-shadow: 1px 1px 0px #000;
+              margin-bottom: 8px;
+              text-align: center;
+              font-family: 'Luckiest Guy', cursive;
+            ">ENTER YOUR NAME</div>
+
+            <input
+              id="player-name-input"
+              type="text"
+              maxlength="12"
+              placeholder="Your Name"
+              style="
+                width: 100%;
+                padding: 10px;
+                font-size: 18px;
+                font-family: 'Luckiest Guy', cursive;
+                text-align: center;
+                background: rgba(255, 255, 255, 0.9);
+                border: 3px solid ${colors.gold};
+                border-radius: 8px;
+                outline: none;
+                color: #000;
+                margin-bottom: 8px;
+                box-sizing: border-box;
+                pointer-events: auto;
+                touch-action: manipulation;
+              "
+            />
+
+            <button
+              id="submit-name-btn"
+              style="
+                width: 100%;
+                padding: 10px;
+                font-size: 18px;
+                font-family: 'Luckiest Guy', cursive;
+                background: linear-gradient(135deg, ${colors.gold} 0%, #d4a617 100%);
+                color: #000;
+                border: 2px solid rgba(255,255,255,.5);
+                border-radius: 8px;
+                cursor: pointer;
+                box-shadow: 0 3px 12px rgba(237,183,35,.5);
+                transition: all 0.2s ease;
+                text-shadow: 1px 1px 0px rgba(255,255,255,0.3);
+                pointer-events: auto;
+                touch-action: manipulation;
+              "
+              onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 4px 16px rgba(237,183,35,.7)';"
+              onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 3px 12px rgba(237,183,35,.5)';"
+              onmousedown="this.style.transform='scale(0.97)';"
+              onmouseup="this.style.transform='scale(1.03)';"
+              ontouchstart="this.style.transform='scale(0.97)';"
+              ontouchend="this.style.transform='scale(1)';"
+            >
+              SUBMIT SCORE
+            </button>
+
+            <div style="
+              font-size: 11px;
+              color: rgba(255,255,255,0.6);
+              text-align: center;
+              margin-top: 8px;
+              font-family: Arial, sans-serif;
+            ">
+              Connect your wallet at <a href="https://bearpark.xyz" target="_blank" style="color: ${colors.gold}; text-decoration: underline;">bearpark.xyz</a> to save your scores!
+            </div>
+          </div>
+          `}
+
+          <!-- Leaderboard Title -->
+          <div style="
+            font-size: 20px;
+            color: ${colors.gold};
+            text-shadow: 2px 2px 0px #000;
+            text-align: center;
+            text-transform: uppercase;
+            font-family: 'Luckiest Guy', cursive;
+          ">🏆 TOP 5 PLAYERS 🏆</div>
+
+          <!-- Leaderboard -->
+          <div style="
+            background: radial-gradient(500px 200px at 50% -20%, rgba(118,174,255,.08), transparent 60%), ${colors.ink};
+            border-radius: 12px;
+            padding: 10px;
+            max-height: 140px;
+            overflow-y: auto;
+          ">
+            ${leaderboardHTML}
+          </div>
+
+          <!-- Retry Button -->
+          <button
+            id="restart-button"
+            style="
+              width: 100%;
+              padding: 12px;
+              font-size: 24px;
+              font-family: 'Luckiest Guy', cursive;
+              background: linear-gradient(135deg, #ff3333 0%, #cc0000 100%);
+              color: #fff;
+              border: 3px solid rgba(255,255,255,.3);
+              border-radius: 12px;
+              cursor: pointer;
+              box-shadow: 0 4px 16px rgba(255,51,51,.5);
+              transition: all 0.2s ease;
+              text-shadow: 2px 2px 0px #000;
+              animation: blink 1s ease-in-out infinite alternate;
+              pointer-events: auto;
+              touch-action: manipulation;
+            "
+            onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 5px 20px rgba(255,51,51,.7)';"
+            onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 16px rgba(255,51,51,.5)';"
+            onmousedown="this.style.transform='scale(0.97)';"
+            onmouseup="this.style.transform='scale(1.03)';"
+            ontouchstart="this.style.transform='scale(0.97)';"
+            ontouchend="this.style.transform='scale(1)';"
+          >
+            TAP TO RETRY
+          </button>
+
+          <!-- Main Menu Button -->
+          <button
+            id="menu-button"
+            style="
+              width: 100%;
+              padding: 10px;
+              font-size: 18px;
+              font-family: 'Luckiest Guy', cursive;
+              background: rgba(255,255,255,0.1);
+              color: #fff;
+              border: 2px solid rgba(255,255,255,.3);
+              border-radius: 10px;
+              cursor: pointer;
+              transition: all 0.2s ease;
+              text-shadow: 2px 2px 0px #000;
+              pointer-events: auto;
+              touch-action: manipulation;
+            "
+            onmouseover="this.style.background='rgba(255,255,255,0.2)'; this.style.borderColor='${colors.gold}';"
+            onmouseout="this.style.background='rgba(255,255,255,0.1)'; this.style.borderColor='rgba(255,255,255,.3)';"
+            ontouchstart="this.style.background='rgba(255,255,255,0.2)'; this.style.borderColor='${colors.gold}';"
+            ontouchend="this.style.background='rgba(255,255,255,0.1)'; this.style.borderColor='rgba(255,255,255,.3)';"
+          >
+            MAIN MENU
+          </button>
+
+        </div>
+
+        <!-- Custom Animations -->
+        <style>
+          @keyframes gameOverPulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.05); }
+          }
+
+          @keyframes blink {
+            from { opacity: 0.8; }
+            to { opacity: 1; }
+          }
+
+          input:focus {
+            border-color: ${colors.purple} !important;
+            box-shadow: 0 0 0 4px rgba(104, 12, 217, 0.3) !important;
+          }
+
+          @media (max-width: 600px) {
+            #game-over-container > div:first-child {
+              padding-top: 20px;
+            }
+          }
+        </style>
+      </div>
+    `
+
+    // Create DOM element
+    const gameOverDiv = document.createElement('div')
+    gameOverDiv.innerHTML = uiHTML
+    document.body.appendChild(gameOverDiv.firstElementChild)
+
+    // Store reference for cleanup
+    this.gameOverContainer = document.getElementById('game-over-container')
+
+    // Setup name submission if not authenticated
+    this.setupNameSubmission()
+  }
+
+  setupInputs() {
+    // Setup button click handlers
+    const restartButton = document.getElementById('restart-button')
+    const menuButton = document.getElementById('menu-button')
+
+    if (restartButton) {
+      restartButton.addEventListener('click', (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        this.restartGame()
+      })
+    }
+
+    if (menuButton) {
+      menuButton.addEventListener('click', (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        this.returnToTitle()
+      })
+    }
+
+    // Listen for keyboard events
+    this.enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER)
+    this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
+    this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC)
+
+    this.enterKey.on('down', () => {
+      // Check if input is focused
+      const input = document.getElementById('player-name-input')
+      if (input && document.activeElement === input) {
+        return // Don't restart if typing
+      }
+      this.restartGame()
     })
+
+    this.spaceKey.on('down', () => {
+      // Check if input is focused
+      const input = document.getElementById('player-name-input')
+      if (input && document.activeElement === input) {
+        return // Don't restart if typing
+      }
+      this.restartGame()
+    })
+
+    this.escKey.on('down', () => {
+      this.returnToTitle()
+    })
+  }
+
+  setupNameSubmission() {
+    const submitBtn = document.getElementById('submit-name-btn')
+    const nameInput = document.getElementById('player-name-input')
+
+    if (submitBtn && nameInput) {
+      submitBtn.addEventListener('click', (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        const name = nameInput.value.trim()
+        if (name.length > 0) {
+          this.submitScore(name)
+        }
+      })
+
+      // Handle keyboard events
+      nameInput.addEventListener('keydown', (e) => {
+        e.stopPropagation()
+      })
+
+      nameInput.addEventListener('keypress', (e) => {
+        e.stopPropagation()
+
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          const name = nameInput.value.trim()
+          if (name.length > 0) {
+            this.submitScore(name)
+          }
+        }
+      })
+
+      nameInput.addEventListener('keyup', (e) => {
+        e.stopPropagation()
+      })
+    }
+  }
+
+  async submitScore(name) {
+    if (this.nameSubmitted) return
+
+    console.log('🔍 submitScore called with name:', name)
+    this.nameSubmitted = true
+
+    // Submit score to BEAR Park central leaderboard
+    try {
+      console.log('🔍 Submitting score to BEAR Park API...')
+      const result = await BEARParkAPI.submitScore(this.totalScore, {
+        max_height: this.maxHeight,
+        player_name: name
+      })
+      console.log('🔍 Submit score result:', result)
+
+      if (result.success && result.is_high_score) {
+        console.log('🎉 New BEAR Park high score!')
+      } else if (result.success) {
+        console.log('✅ Score submitted successfully')
+      }
+
+      // Reload leaderboard from central API to show updated rankings
+      console.log('🔍 Reloading leaderboard after submission...')
+      await this.loadLeaderboard()
+
+      // Recreate UI to show updated leaderboard
+      console.log('🔍 Recreating UI...')
+      if (this.gameOverContainer && this.gameOverContainer.parentNode) {
+        this.gameOverContainer.parentNode.removeChild(this.gameOverContainer)
+      }
+      this.createUI()
+      this.setupInputs()
+      console.log('🔍 UI recreated successfully')
+    } catch (error) {
+      console.error('❌ Error submitting to BEAR Park:', error)
+    }
+
+    // Play UI click sound (only if manual submission)
+    if (!BEARParkAPI.isAuthenticated()) {
+      this.sound.add("ui_click", { volume: 0.3 }).play()
+    }
+
+    // Hide name entry form (if it exists)
+    const nameContainer = document.getElementById('name-entry-container')
+    if (nameContainer) {
+      nameContainer.style.display = 'none'
+    }
+  }
+
+  restartGame() {
+    // Play click sound effect
+    this.sound.add("ui_click", { volume: 0.3 }).play()
+
+    // Remove DOM element
+    if (this.gameOverContainer && this.gameOverContainer.parentNode) {
+      this.gameOverContainer.parentNode.removeChild(this.gameOverContainer)
+    }
+
+    // Stop background music from previous game
+    const gameScene = this.scene.get('GameScene')
+    if (gameScene && gameScene.backgroundMusic) {
+      gameScene.backgroundMusic.stop()
+    }
+
+    // Stop all running scenes
+    this.scene.stop('GameScene')
+    this.scene.stop('UIScene')
+
+    // Restart game and UI
+    this.scene.start('GameScene')
+    this.scene.stop()
   }
 
   returnToTitle() {
     // Play sound
     this.sound.add('ui_click', { volume: 0.3 }).play()
-    
+
+    // Remove DOM element
+    if (this.gameOverContainer && this.gameOverContainer.parentNode) {
+      this.gameOverContainer.parentNode.removeChild(this.gameOverContainer)
+    }
+
     // Stop background music from game if it exists
     const gameScene = this.scene.get('GameScene')
     if (gameScene && gameScene.backgroundMusic) {
       gameScene.backgroundMusic.stop()
     }
-    
+
     // Clean up listeners
     this.input.keyboard.removeAllListeners()
     this.input.removeAllListeners()
-    
+
     // Stop scenes
     if (this.scene.isActive('GameScene')) {
       this.scene.stop('GameScene')
@@ -338,101 +612,9 @@ export class HighScoreScene extends Phaser.Scene {
     if (this.scene.isActive('UIScene')) {
       this.scene.stop('UIScene')
     }
-    
-    // Fade out and start title
-    this.cameras.main.fadeOut(300, 0, 0, 0)
-    this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.start('TitleScene')
-    })
-  }
 
-  // Display Top 10 Leaderboard table
-  displayLeaderboardTable(startY) {
-    const screenWidth = screenSize.width.value
-    const screenHeight = screenSize.height.value
-
-    // Table header
-    const headerY = startY
-    const headerStyle = {
-      fontFamily: 'SupercellMagic',
-      fontSize: '14px',
-      fill: '#FFD700',
-      stroke: '#000000',
-      strokeThickness: 2
-    }
-    
-    this.add.text(screenWidth * 0.12, headerY, '#', headerStyle).setOrigin(0, 0.5).setDepth(1001)
-    this.add.text(screenWidth * 0.28, headerY, 'Name', headerStyle).setOrigin(0, 0.5).setDepth(1001)
-    this.add.text(screenWidth * 0.62, headerY, 'Score', headerStyle).setOrigin(0, 0.5).setDepth(1001)
-    this.add.text(screenWidth * 0.88, headerY, 'Height', headerStyle).setOrigin(1, 0.5).setDepth(1001)
-
-    // Entries
-    const entriesStartY = startY + 28
-    const lineHeight = 26
-    const maxEntries = Math.min(this.leaderboard.length, 10) // Top 10 only
-
-    if (this.leaderboard.length === 0) {
-      this.add.text(screenWidth / 2, entriesStartY + 40, 'No scores yet!\nBe the first!', {
-        fontFamily: 'SupercellMagic',
-        fontSize: '18px',
-        fill: '#ffffff',
-        stroke: '#000000',
-        strokeThickness: 3,
-        align: 'center',
-        lineSpacing: 6
-      }).setOrigin(0.5).setDepth(1001)
-    } else {
-      for (let i = 0; i < maxEntries; i++) {
-        const entry = this.leaderboard[i]
-        const rank = i + 1
-        const y = entriesStartY + (i * lineHeight)
-        
-        // Highlight if this is the player's new score
-        const isPlayerScore = !this.viewOnly && 
-          entry.score === this.totalScore && 
-          entry.height === this.maxHeight
-        
-        // Color based on rank or highlight
-        let color = '#ffffff'
-        let glowColor = null
-        
-        if (isPlayerScore) {
-          color = '#00FFFF' // Cyan highlight for player
-          glowColor = 0x00FFFF
-        } else if (rank === 1) {
-          color = '#FFD700' // Gold
-        } else if (rank === 2) {
-          color = '#C0C0C0' // Silver
-        } else if (rank === 3) {
-          color = '#CD7F32' // Bronze
-        }
-        
-        const entryStyle = {
-          fontFamily: 'Arial, sans-serif',
-          fontSize: '14px',
-          fill: color,
-          stroke: '#000000',
-          strokeThickness: 2
-        }
-        
-        const rankText = this.add.text(screenWidth * 0.12, y, `${rank}`, entryStyle).setOrigin(0, 0.5).setDepth(1001)
-        const nameText = this.add.text(screenWidth * 0.28, y, entry.name.substring(0, 10), entryStyle).setOrigin(0, 0.5).setDepth(1001)
-        const scoreText = this.add.text(screenWidth * 0.62, y, `${entry.score}`, entryStyle).setOrigin(0, 0.5).setDepth(1001)
-        const heightText = this.add.text(screenWidth * 0.88, y, `${entry.height}`, entryStyle).setOrigin(1, 0.5).setDepth(1001)
-        
-        // Add subtle glow to player's score
-        if (isPlayerScore && glowColor) {
-          this.tweens.add({
-            targets: [rankText, nameText, scoreText, heightText],
-            alpha: 0.7,
-            duration: 800,
-            ease: 'Sine.easeInOut',
-            yoyo: true,
-            repeat: -1
-          })
-        }
-      }
-    }
+    // Start title
+    this.scene.start('TitleScene')
   }
 
   // Show leaderboard only (from title screen)
@@ -450,8 +632,8 @@ export class HighScoreScene extends Phaser.Scene {
       align: 'center'
     }).setOrigin(0.5).setDepth(1001)
 
-    // Display leaderboard
-    this.displayLeaderboardTable(screenHeight * 0.18)
+    // Display leaderboard (this is for view-only mode from title screen)
+    // Could be enhanced with BEAR Park styling later if needed
 
     // Continue button
     const continueBtn = this.add.text(screenWidth / 2, screenHeight * 0.88, 'BACK', {
@@ -468,27 +650,5 @@ export class HighScoreScene extends Phaser.Scene {
     // Enter key also works
     this.input.keyboard.on('keydown-ENTER', () => this.returnToTitle())
     this.input.keyboard.on('keydown-ESC', () => this.returnToTitle())
-  }
-
-  showToast(message) {
-    const screenWidth = screenSize.width.value
-    const screenHeight = screenSize.height.value
-    
-    const toast = this.add.text(screenWidth / 2, screenHeight * 0.1, message, {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '14px',
-      fill: '#ffffff',
-      backgroundColor: '#333333',
-      padding: { x: 15, y: 10 }
-    }).setOrigin(0.5).setDepth(2000)
-    
-    this.time.delayedCall(3000, () => {
-      this.tweens.add({
-        targets: toast,
-        alpha: 0,
-        duration: 500,
-        onComplete: () => toast.destroy()
-      })
-    })
   }
 }
