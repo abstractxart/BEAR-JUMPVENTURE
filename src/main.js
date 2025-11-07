@@ -16,6 +16,9 @@ const config = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
+  loader: {
+    baseURL: '/bear-jumpventure/',
+  },
   input: {
     activePointers: 3, // Enable multi-touch (up to 3 simultaneous touches)
   },
