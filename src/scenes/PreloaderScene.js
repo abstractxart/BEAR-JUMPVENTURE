@@ -29,8 +29,8 @@ export default class PreloaderScene extends Phaser.Scene {
       }
     })
 
-    // Load asset pack by type
-    this.load.pack('assetPack', 'assets/asset-pack.json')
+    // Load asset pack by type (using Vite BASE_URL for deployment subdirectory support)
+    this.load.pack('assetPack', `${import.meta.env.BASE_URL}assets/asset-pack.json`)
   }
 
   getFileExtension(type) {
