@@ -196,8 +196,8 @@ export default class GameScene extends Phaser.Scene {
       // 💎 COCAINE BEAR: Manually stop player when landing on platform
       // This prevents jetpack phasing while allowing jump-through from below
       if (isFalling && isApproachingFromAbove) {
-        // Check if player's bottom is crossing platform's top (with small threshold)
-        if (playerBottom >= platformTop && playerBottom < platformTop + 15) {
+        // Check if player's bottom is crossing platform's top (WIDE threshold for jetpack speeds)
+        if (playerBottom >= platformTop && playerBottom < platformTop + 60) {
           // Stop the player on top of platform
           player.y = platformTop - (player.body.height / 2) - 1
           player.body.setVelocityY(0)
