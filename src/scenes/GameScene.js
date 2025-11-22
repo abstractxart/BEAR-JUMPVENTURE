@@ -186,32 +186,41 @@ export default class GameScene extends Phaser.Scene {
   }
 
   setupCollisions() {
-    // 💎 COCAINE BEAR: Use collider with process callback for one-way platforms
-    // This prevents jetpack phasing while allowing jump-through from below
-    this.physics.add.collider(this.player, this.platforms, (player, platform) => {
-      // Only trigger bounce when player is falling down AND approaching from above
-      if (player.body.velocity.y > 0 && player.y < platform.y) {
-        platform.onPlayerLand(player)
+    // 💎 COCAINE BEAR: Use overlap (non-blocking) with manual jetpack phase prevention
+    this.physics.add.overlap(this.player, this.platforms, (player, platform) => {
+      const playerBottom = player.body.bottom
+      const platformTop = platform.body.top
+      const isFalling = player.body.velocity.y > 0
+      const isApproachingFromAbove = player.y < platform.y
 
-        // 💎 COCAINE BEAR: INCREMENT COMBO ON PLATFORM BOUNCE
-        this.combo++
-        this.maxCombo = Math.max(this.maxCombo, this.combo)
+      // 💎 COCAINE BEAR: Manually stop player when landing on platform
+      // This prevents jetpack phasing while allowing jump-through from below
+      if (isFalling && isApproachingFromAbove) {
+        // Check if player's bottom is crossing platform's top (with small threshold)
+        if (playerBottom >= platformTop && playerBottom < platformTop + 15) {
+          // Stop the player on top of platform
+          player.y = platformTop - (player.body.height / 2) - 1
+          player.body.setVelocityY(0)
 
-        // Calculate combo multiplier (2x at 5, 3x at 10, 5x at 15+)
-        if (this.combo >= 15) {
-          this.comboMultiplier = 5.0
-        } else if (this.combo >= 10) {
-          this.comboMultiplier = 3.0
-        } else if (this.combo >= 5) {
-          this.comboMultiplier = 2.0
-        } else {
-          this.comboMultiplier = 1.0
+          // Trigger platform bounce
+          platform.onPlayerLand(player)
+
+          // 💎 COCAINE BEAR: INCREMENT COMBO ON PLATFORM BOUNCE
+          this.combo++
+          this.maxCombo = Math.max(this.maxCombo, this.combo)
+
+          // Calculate combo multiplier (2x at 5, 3x at 10, 5x at 15+)
+          if (this.combo >= 15) {
+            this.comboMultiplier = 5.0
+          } else if (this.combo >= 10) {
+            this.comboMultiplier = 3.0
+          } else if (this.combo >= 5) {
+            this.comboMultiplier = 2.0
+          } else {
+            this.comboMultiplier = 1.0
+          }
         }
       }
-    }, (player, platform) => {
-      // 💎 COCAINE BEAR: Process callback - only collide when player is above platform
-      // This creates one-way platforms (can jump through from below)
-      return player.body.bottom <= platform.body.top + 10 && player.body.velocity.y >= 0
     })
 
     // Player-enemy collision - stomp or collision
