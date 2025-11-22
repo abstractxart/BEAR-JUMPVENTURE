@@ -440,9 +440,14 @@ export default class GameScene extends Phaser.Scene {
         }
         this.platforms.add(platform)
 
+        // 💎 COCAINE BEAR: Grace period - no enemies for first 8 seconds
+        const timeSinceStart = this.time.now - this.gameStartTime
+        const enemyGracePeriod = 8000 // 8 seconds
+        const graceActive = timeSinceStart < enemyGracePeriod
+
         // May generate enemy (chance increases with difficulty)
         const enemyChance = enemyConfig.spawnChance.value * scales.enemySpawnChanceMul
-        if (Phaser.Math.Between(1, 100) <= enemyChance) {
+        if (!graceActive && Phaser.Math.Between(1, 100) <= enemyChance) {
           const enemyType = Enemy.getRandomEnemyTypeWithDifficulty(this.difficulty.factor())
           
           if (enemyType === 'gary') {
