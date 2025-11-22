@@ -350,6 +350,11 @@ export default class GameScene extends Phaser.Scene {
           // 💎 COCAINE BEAR: Check fireball collision for this Gary
           if (enemy.fireballs && enemy.fireballs.children) {
             enemy.fireballs.children.entries.forEach(fireball => {
+              // 💎 COCAINE BEAR: BUG FIX - Update fireball to destroy when off-screen!
+              if (fireball.active && fireball.update) {
+                fireball.update()
+              }
+
               if (fireball.active && this.physics.overlap(this.player, fireball)) {
                 if (!this.player.isInvincible && !this.gameOver) {
                   this.gameOver = true
