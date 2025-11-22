@@ -9,17 +9,20 @@ export class Fireball extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this)
     scene.physics.add.existing(this)
     
-    // Set scale - fireball should be medium sized
-    const targetHeight = 30
+    // 💎 COCAINE BEAR: Make fireballs BIGGER and more visible!
+    const targetHeight = 50  // Increased from 30 to 50 (66% bigger!)
     const actualHeight = 723
     const targetScale = targetHeight / actualHeight
     this.setScale(targetScale)
-    
+
     // Set origin to center
     this.setOrigin(0.5, 0.5)
-    
+
     // Set depth to ensure visibility
     this.setDepth(200)
+
+    // 💎 COCAINE BEAR: Add red tint so fireballs are SUPER visible!
+    this.setTint(0xff3300)  // Bright red-orange tint
     
     // Disable gravity
     this.body.setAllowGravity(false)
