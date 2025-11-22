@@ -303,11 +303,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       const jetpackScale = targetHeight / this.jetpackSpriteHeight
       this.setScale(jetpackScale)
 
-      // 💎 COCAINE BEAR: FIX JETPACK COLLISION - Set body size like jester hat does!
+      // 💎 COCAINE BEAR: FIX JETPACK COLLISION - Maintain consistent body size!
+      // Keep the same body size as idle state for consistent collision
       this.body.setSize(this.idleBodyWidth, this.idleBodyHeight)
-      const offsetX = (934 * jetpackScale * 0.5) - (this.idleBodyWidth * jetpackScale / 2)
-      const offsetY = (1257 * jetpackScale * 1.0) - (this.idleBodyHeight * jetpackScale)
-      this.body.setOffset(offsetX / jetpackScale, offsetY / jetpackScale)
 
       return
     }
