@@ -50,6 +50,15 @@ export class Platform extends Phaser.Physics.Arcade.Sprite {
       // Other platforms use static bodies
       scene.physics.add.existing(this, true) // true means static body
     }
+
+    // 💎 COCAINE BEAR: Apply BearPark brand colors to platforms
+    const platformColors = {
+      'normal': 0x680cd9,    // Purple
+      'breaking': 0xfeb501,  // Yellow
+      'moving': 0x07ae08,    // Green
+      'spring': 0xfeb501     // Yellow (spring uses yellow like breaking)
+    }
+    this.setTint(platformColors[type])
   }
 
   setPlatformScale() {
@@ -195,7 +204,7 @@ export class Platform extends Phaser.Physics.Arcade.Sprite {
       lifespan: 400,
       gravityY: 300,
       quantity: 15,
-      tint: [0xFFD700, 0xFFA500, 0xFFFF00]
+      tint: [0xfeb501, 0xffd700, 0xffff00] // Yellow spring particles (BearPark yellow)
     })
     particles.explode()
     this.scene.time.delayedCall(500, () => particles.destroy())
