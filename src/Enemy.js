@@ -248,6 +248,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.isDead = true
     this.enemyDefeatSound.play()
 
+    // 💎 COCAINE BEAR: Disable physics body IMMEDIATELY so dead enemy can't hurt player!
+    if (this.body) {
+      this.body.enable = false
+    }
+
     // Play defeat animation effect
     this.scene.tweens.add({
       targets: this,

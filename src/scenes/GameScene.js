@@ -228,6 +228,9 @@ export default class GameScene extends Phaser.Scene {
 
     // Player-enemy collision - stomp or collision
     this.physics.add.overlap(this.player, this.enemies, (player, enemy) => {
+      // 💎 COCAINE BEAR: BUG FIX - Don't collide with dead enemies!
+      if (enemy.isDead) return
+
       if (player.body.velocity.y > 0 && player.y < enemy.y) {
         // Player stomps enemy
         if (enemy instanceof GaryEnemy) {
@@ -249,19 +252,8 @@ export default class GameScene extends Phaser.Scene {
       }
     })
     
-    // Player-fireball collision (from Gary enemy)
-    this.physics.add.overlap(this.player, this.enemies, (player, enemy) => {
-      if (enemy instanceof GaryEnemy) {
-        // Check collision with Gary's fireballs
-        this.physics.add.overlap(player, enemy.fireballs, (player, fireball) => {
-          if (!player.isInvincible && !this.gameOver) {
-            this.gameOver = true
-            player.die()
-            fireball.destroy()
-          }
-        })
-      }
-    })
+    // 💎 COCAINE BEAR: BUG FIX - Setup fireball collision once per Gary, not every frame!
+    // This will be handled in the update loop by checking all Gary enemies
 
     // Player-coin collision
     this.physics.add.overlap(this.player, this.coins, (player, coin) => {
@@ -352,6 +344,19 @@ export default class GameScene extends Phaser.Scene {
         // Gary enemy needs time and player reference
         if (enemy instanceof GaryEnemy) {
           enemy.update(this.time.now, this.player)
+
+          // 💎 COCAINE BEAR: Check fireball collision for this Gary
+          if (enemy.fireballs && enemy.fireballs.children) {
+            enemy.fireballs.children.entries.forEach(fireball => {
+              if (fireball.active && this.physics.overlap(this.player, fireball)) {
+                if (!this.player.isInvincible && !this.gameOver) {
+                  this.gameOver = true
+                  this.player.die()
+                  fireball.destroy()
+                }
+              }
+            })
+          }
         } else {
           enemy.update()
         }

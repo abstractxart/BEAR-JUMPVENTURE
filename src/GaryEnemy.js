@@ -107,12 +107,20 @@ export class GaryEnemy extends Phaser.Physics.Arcade.Sprite {
   
   die() {
     this.isDead = true
-    
+
+    // 💎 COCAINE BEAR: Disable physics body IMMEDIATELY so dead Gary can't hurt player!
+    if (this.body) {
+      this.body.enable = false
+    }
+
+    // 💎 COCAINE BEAR: Destroy all fireballs IMMEDIATELY when Gary dies!
+    this.fireballs.clear(true, true)
+
     // Play defeat sound if available
     if (this.scene.sound.get('enemy_defeat')) {
       this.scene.sound.play('enemy_defeat', { volume: 0.3 })
     }
-    
+
     // Fade out and destroy
     this.scene.tweens.add({
       targets: this,
@@ -120,8 +128,6 @@ export class GaryEnemy extends Phaser.Physics.Arcade.Sprite {
       angle: 360,
       duration: 500,
       onComplete: () => {
-        // Destroy all fireballs
-        this.fireballs.clear(true, true)
         this.destroy()
       }
     })
