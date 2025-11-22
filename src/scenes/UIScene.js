@@ -54,13 +54,13 @@ export default class UIScene extends Phaser.Scene {
       strokeThickness: 3
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(100)
 
-    // 💎 COCAINE BEAR: COMBO DISPLAY
-    this.comboText = this.add.text(screenSize.width.value / 2, 140, '', {
+    // 💎 COCAINE BEAR: COMBO DISPLAY (moved higher and made smaller)
+    this.comboText = this.add.text(screenSize.width.value / 2, 90, '', {
       fontFamily: 'SupercellMagic',
-      fontSize: '28px',
+      fontSize: '22px',
       color: '#FFD700',
       stroke: '#000000',
-      strokeThickness: 5
+      strokeThickness: 4
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(100)
 
     // 4) Create mute button with an explicit, generous hit area
@@ -160,15 +160,15 @@ export default class UIScene extends Phaser.Scene {
     if (multiplier >= 5.0) {
       color = '#FF00FF' // Magenta - INSANE
       text = `💎 ${combo} COMBO! 5X SCORE 💎`
-      this.comboText.setFontSize('32px')
+      this.comboText.setFontSize('25px')
     } else if (multiplier >= 3.0) {
       color = '#FF4500' // Red-Orange - HUGE
       text = `🔥 ${combo} COMBO! 3X SCORE 🔥`
-      this.comboText.setFontSize('30px')
+      this.comboText.setFontSize('24px')
     } else if (multiplier >= 2.0) {
       color = '#FFD700' // Gold - GOOD
       text = `⚡ ${combo} COMBO! 2X SCORE ⚡`
-      this.comboText.setFontSize('28px')
+      this.comboText.setFontSize('22px')
     }
 
     this.comboText.setColor(color)
