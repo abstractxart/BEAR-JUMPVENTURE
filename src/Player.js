@@ -251,11 +251,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.body.setVelocityX(0)
     }
 
-    // Apply Honey Jet boost if active and moving upward
-    if (this.hasHoneyJetBoost && this.body.velocity.y < 0) {
-      this.body.setVelocityY(this.body.velocity.y * this.honeyJetBoostPower) // Amplify upward velocity
-    }
-
     // Update facing direction
     this.setFlipX(this.facingDirection === "left")
 
@@ -333,16 +328,28 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   jump(velocityY = null) {
-    // F) Apply jester hat jump multiplier
-    const multiplier = this.jesterHatActive ? gameConfig.jesterHatJumpMultiplier.value : 1.0
+    // Apply all jump multipliers (jester hat + honey jet boost)
+    let multiplier = this.jesterHatActive ? gameConfig.jesterHatJumpMultiplier.value : 1.0
+
+    // 💎 COCAINE BEAR: Apply Honey Jet boost multiplier once on jump
+    if (this.hasHoneyJetBoost) {
+      multiplier *= this.honeyJetBoostPower
+    }
+
     const jumpVelocity = velocityY || -(this.jumpPower * multiplier)
     this.body.setVelocityY(jumpVelocity)
     this.jumpSound.play()
   }
 
   springJump() {
-    // F) Apply jester hat jump multiplier
-    const multiplier = this.jesterHatActive ? gameConfig.jesterHatJumpMultiplier.value : 1.0
+    // Apply all jump multipliers (jester hat + honey jet boost)
+    let multiplier = this.jesterHatActive ? gameConfig.jesterHatJumpMultiplier.value : 1.0
+
+    // 💎 COCAINE BEAR: Apply Honey Jet boost multiplier once on jump
+    if (this.hasHoneyJetBoost) {
+      multiplier *= this.honeyJetBoostPower
+    }
+
     const springVelocity = -(this.jumpPower * playerConfig.springBounceMultiplier.value * multiplier)
     this.body.setVelocityY(springVelocity)
     this.springBounceSound.play()
