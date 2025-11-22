@@ -49,6 +49,8 @@ export class Platform extends Phaser.Physics.Arcade.Sprite {
     } else {
       // Other platforms use static bodies
       scene.physics.add.existing(this, true) // true means static body
+      // 💎 COCAINE BEAR: Refresh static body to match scaled sprite size!
+      this.body.updateFromGameObject()
     }
 
     // 💎 COCAINE BEAR: Apply BearPark brand colors to platforms
