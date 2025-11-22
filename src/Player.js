@@ -513,7 +513,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     
     // Play game over sound effect
     this.scene.sound.add("game_over", { volume: 0.3 }).play()
-    
+
+    // Award honey points using game-points-helper (shows popup)
+    if (window.awardGamePoints && this.scene.gameStartTime) {
+      const gameEndTime = this.scene.time.now
+      const durationMs = gameEndTime - this.scene.gameStartTime
+      const minutesPlayed = durationMs / 60000 // Convert ms to minutes
+      console.log(`🍯 Game duration: ${minutesPlayed.toFixed(2)} minutes`)
+      window.awardGamePoints('bear-jumpventure', minutesPlayed)
+    }
+
     // Start high score scene with both score and height
     this.scene.scene.start("HighScoreScene", {
       totalScore: this.scene.score,

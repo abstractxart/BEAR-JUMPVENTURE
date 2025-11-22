@@ -21,11 +21,14 @@ export class Platform extends Phaser.Physics.Arcade.Sprite {
     this.hasBeenStepped = false
     this.isDestroyed = false
     this.touchCount = 0 // Track how many times platform has been touched
-    this.maxTouches = 2 // Normal platforms can be touched twice before breaking (difficulty scaled)
+    // Get max touches from difficulty manager (starts at 2, scales down to 1 at high difficulty)
+    this.maxTouches = scene.difficulty ? scene.difficulty.scales.normalPlatformMaxTouches : 2
 
     // Moving platform properties
     this.direction = Phaser.Math.Between(0, 1) ? -1 : 1
-    this.moveSpeed = platformConfig.movingPlatformSpeed.value
+    // Apply difficulty scaling to moving platform speed
+    const speedMultiplier = scene.difficulty ? scene.difficulty.scales.movingPlatformSpeedMul : 1.0
+    this.moveSpeed = platformConfig.movingPlatformSpeed.value * speedMultiplier
 
     // Set platform scale
     this.setPlatformScale()

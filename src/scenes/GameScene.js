@@ -263,6 +263,7 @@ export default class GameScene extends Phaser.Scene {
 
   startGame() {
     this.gameStarted = true
+    this.gameStartTime = this.time.now // Track start time for honey points
     // Give player initial upward velocity
     this.player.jump()
   }
