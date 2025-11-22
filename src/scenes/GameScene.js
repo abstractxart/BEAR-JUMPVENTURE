@@ -27,10 +27,15 @@ export default class GameScene extends Phaser.Scene {
     this.gameOver = false
     this.score = 0
     this.highestY = 0
-    
+
     // Height tracking (A)
     this.startY = 0 // Will be set when player spawns
     this.maxHeightClimbed = 0
+
+    // 💎 COCAINE BEAR: COMBO SYSTEM
+    this.combo = 0
+    this.maxCombo = 0
+    this.comboMultiplier = 1.0
 
     // Create fixed tileSprite background
     this.createTileBackground()
@@ -185,6 +190,21 @@ export default class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.platforms, (player, platform) => {
       if (player.body.velocity.y > 0 && player.y < platform.y) {
         platform.onPlayerLand(player)
+
+        // 💎 COCAINE BEAR: INCREMENT COMBO ON PLATFORM BOUNCE
+        this.combo++
+        this.maxCombo = Math.max(this.maxCombo, this.combo)
+
+        // Calculate combo multiplier (2x at 5, 3x at 10, 5x at 15+)
+        if (this.combo >= 15) {
+          this.comboMultiplier = 5.0
+        } else if (this.combo >= 10) {
+          this.comboMultiplier = 3.0
+        } else if (this.combo >= 5) {
+          this.comboMultiplier = 2.0
+        } else {
+          this.comboMultiplier = 1.0
+        }
       }
     })
 
@@ -205,6 +225,7 @@ export default class GameScene extends Phaser.Scene {
         // Player hits enemy - only die if not invincible
         if (!player.isInvincible) {
           this.gameOver = true
+          this.combo = 0 // 💎 COCAINE BEAR: Reset combo on death
           player.die()
         }
       }
@@ -556,13 +577,18 @@ export default class GameScene extends Phaser.Scene {
   }
 
   updateScore(points) {
-    this.score += points
+    // 💎 COCAINE BEAR: Apply combo multiplier to score
+    const multipliedPoints = Math.floor(points * this.comboMultiplier)
+    this.score += multipliedPoints
   }
 
   updateUI() {
     // Send events to UIScene
     this.events.emit('updateScore', this.score)
     this.events.emit('updateHeight', this.highestY)
+
+    // 💎 COCAINE BEAR: Update combo display
+    this.events.emit('updateCombo', this.combo, this.comboMultiplier)
 
     // Update Honey Jet boost status display
     let boostStatus = ''

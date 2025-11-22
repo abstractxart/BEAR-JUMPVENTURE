@@ -54,6 +54,15 @@ export default class UIScene extends Phaser.Scene {
       strokeThickness: 3
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(100)
 
+    // 💎 COCAINE BEAR: COMBO DISPLAY
+    this.comboText = this.add.text(screenSize.width.value / 2, 140, '', {
+      fontFamily: 'SupercellMagic',
+      fontSize: '28px',
+      color: '#FFD700',
+      stroke: '#000000',
+      strokeThickness: 5
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(100)
+
     // 4) Create mute button with an explicit, generous hit area
     this.createMuteButton()
 
@@ -62,6 +71,7 @@ export default class UIScene extends Phaser.Scene {
     this.gameScene?.events.on('updateScore', this.updateScore, this)
     this.gameScene?.events.on('updateHeight', this.updateHeight, this)
     this.gameScene?.events.on('updateBoostStatus', this.updateBoostStatus, this)
+    this.gameScene?.events.on('updateCombo', this.updateCombo, this) // 💎 COCAINE BEAR
 
     // 6) Listen for global mute changes (e.g., from a pause menu)
     this.game.events.on('audio:mute-changed', this.syncMuteIcon, this)
@@ -134,5 +144,34 @@ export default class UIScene extends Phaser.Scene {
 
   updateBoostStatus(boostStatus) {
     this.boostText.setText(boostStatus)
+  }
+
+  // 💎 COCAINE BEAR: COMBO SYSTEM DISPLAY
+  updateCombo(combo, multiplier) {
+    if (combo < 5) {
+      this.comboText.setText('')
+      return
+    }
+
+    // Color code by multiplier tier
+    let color = '#FFD700' // Gold (default)
+    let text = `🔥 ${combo} COMBO!`
+
+    if (multiplier >= 5.0) {
+      color = '#FF00FF' // Magenta - INSANE
+      text = `💎 ${combo} COMBO! 5X SCORE 💎`
+      this.comboText.setFontSize('32px')
+    } else if (multiplier >= 3.0) {
+      color = '#FF4500' // Red-Orange - HUGE
+      text = `🔥 ${combo} COMBO! 3X SCORE 🔥`
+      this.comboText.setFontSize('30px')
+    } else if (multiplier >= 2.0) {
+      color = '#FFD700' // Gold - GOOD
+      text = `⚡ ${combo} COMBO! 2X SCORE ⚡`
+      this.comboText.setFontSize('28px')
+    }
+
+    this.comboText.setColor(color)
+    this.comboText.setText(text)
   }
 }

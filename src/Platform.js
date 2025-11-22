@@ -179,13 +179,30 @@ export class Platform extends Phaser.Physics.Arcade.Sprite {
   handleSpringPlatform(player) {
     // Spring platform provides higher jump
     player.springJump()
-    
+
     // Play spring sound effect
     this.springBounceSound.play()
-    
+
+    // 💎 COCAINE BEAR: SCREEN SHAKE ON SPRING BOUNCE
+    this.scene.cameras.main.shake(100, 0.004)
+
+    // 💎 COCAINE BEAR: PARTICLE EXPLOSION ON SPRING JUMP
+    const particles = this.scene.add.particles(this.x, this.y, 'golden_platform_spring', {
+      speed: { min: 100, max: 300 },
+      angle: { min: 240, max: 300 },
+      scale: { start: 0.15, end: 0 },
+      alpha: { start: 1, end: 0 },
+      lifespan: 400,
+      gravityY: 300,
+      quantity: 15,
+      tint: [0xFFD700, 0xFFA500, 0xFFFF00]
+    })
+    particles.explode()
+    this.scene.time.delayedCall(500, () => particles.destroy())
+
     // Switch to compressed state texture
     this.setTexture('golden_platform_spring_compressed')
-    
+
     // Switch back to normal state after delay
     this.scene.time.delayedCall(200, () => {
       this.setTexture('golden_platform_spring')
@@ -197,6 +214,9 @@ export class Platform extends Phaser.Physics.Arcade.Sprite {
 
     this.isDestroyed = true
     this.platformBreakSound.play()
+
+    // 💎 COCAINE BEAR: SCREEN SHAKE ON BREAK
+    this.scene.cameras.main.shake(150, 0.003)
 
     // Play breaking animation
     this.scene.tweens.add({
