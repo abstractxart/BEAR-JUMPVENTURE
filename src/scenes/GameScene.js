@@ -137,16 +137,18 @@ export default class GameScene extends Phaser.Scene {
     this.lastTouchDirection = null // Track previous frame's touch direction
     
     this.input.on('pointerdown', (pointer) => {
-      // Check if clicking jetpack button - mark this pointer but allow other pointers for movement
+      // 💎 COCAINE BEAR: Check if clicking jetpack button - use SCREEN coords only!
+      // Jetpack button has setScrollFactor(0) so it's in screen space, not world space
       if (this.jetpackButton && this.jetpackButton.visible) {
         const buttonBounds = this.jetpackButton.getBounds()
-        if (buttonBounds.contains(pointer.x + this.cameras.main.scrollX, pointer.y + this.cameras.main.scrollY)) {
+        // Use pointer.x/y directly without camera scroll since button is setScrollFactor(0)
+        if (buttonBounds.contains(pointer.x, pointer.y)) {
           // Jetpack button is handled by its own events, just mark this pointer as jetpack
           this.jetpackPointerId = pointer.id
-          return // Don't process this jetpack pointer as movement
+          return // 💎 Don't process this jetpack pointer as movement!
         }
       }
-      
+
       // Screen split controls - left 50% = left, right 50% = right
       // This pointer is for movement (not jetpack)
       const screenCenterX = screenSize.width.value / 2
