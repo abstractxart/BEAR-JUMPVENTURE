@@ -186,8 +186,10 @@ export default class GameScene extends Phaser.Scene {
   }
 
   setupCollisions() {
-    // Player-platform collision - only triggered when player is falling
-    this.physics.add.overlap(this.player, this.platforms, (player, platform) => {
+    // 💎 COCAINE BEAR: Use collider with process callback for one-way platforms
+    // This prevents jetpack phasing while allowing jump-through from below
+    this.physics.add.collider(this.player, this.platforms, (player, platform) => {
+      // Only trigger bounce when player is falling down AND approaching from above
       if (player.body.velocity.y > 0 && player.y < platform.y) {
         platform.onPlayerLand(player)
 
@@ -206,6 +208,10 @@ export default class GameScene extends Phaser.Scene {
           this.comboMultiplier = 1.0
         }
       }
+    }, (player, platform) => {
+      // 💎 COCAINE BEAR: Process callback - only collide when player is above platform
+      // This creates one-way platforms (can jump through from below)
+      return player.body.bottom <= platform.body.top + 10 && player.body.velocity.y >= 0
     })
 
     // Player-enemy collision - stomp or collision
