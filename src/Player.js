@@ -57,6 +57,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       fuelMs: 0,
       totalMs: 1200, // 1.2 seconds of fuel (cannot exceed)
       active: false,
+      wasActive: false, // 💎 COCAINE BEAR: Track previous frame state for press detection
       thrust: 650,
       thrustParticles: null
     }
@@ -136,13 +137,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // Handle jetpack activation with SPACE key
     if (this.jetpack.hasBooster && this.jetpack.fuelMs > 0 && cursors.space.isDown) {
+      // 💎 COCAINE BEAR: Anti-exploit - consume 25% fuel on each NEW press
+      const isNewPress = !this.jetpack.wasActive
+      if (isNewPress) {
+        const minimumFuelCost = this.jetpack.totalMs * 0.25 // 25% of total fuel
+        this.jetpack.fuelMs = Math.max(0, this.jetpack.fuelMs - minimumFuelCost)
+        console.log(`🚀 Jetpack pressed - consumed 25% fuel (${minimumFuelCost}ms)`)
+      }
+
       // Activate jetpack
       this.jetpack.active = true
 
       // Apply upward thrust
       this.body.setVelocityY(-this.jetpack.thrust)
 
-      // Consume fuel
+      // Consume fuel per frame (in addition to press cost)
       this.jetpack.fuelMs = Math.max(0, this.jetpack.fuelMs - delta)
 
       // Play jetpack sound
@@ -168,12 +177,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         if (this.scene.jetpackUI) {
           this.scene.jetpackUI.setVisible(false)
         }
-        
+
         // Hide mobile jetpack button
         if (this.scene.hideJetpackButton) {
           this.scene.hideJetpackButton()
         }
-        
+
         // Clean up particles
         if (this.jetpack.thrustParticles) {
           this.jetpack.thrustParticles.destroy()
@@ -181,6 +190,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         }
       }
     }
+
+    // 💎 COCAINE BEAR: Track state for next frame's press detection
+    this.jetpack.wasActive = this.jetpack.active
 
     // Update particle effects
     this.updateJetpackParticles()
